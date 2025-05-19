@@ -19,7 +19,7 @@ A desktop application built with Python and PyQt5 for managing employee informat
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/yourusername/employee-management.git
+https://github.com/Joseph-Abdullaah/Employee-management-system.git
 cd employee-management
 ```
 
