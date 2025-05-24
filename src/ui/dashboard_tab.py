@@ -21,44 +21,47 @@ class DashboardTab(QWidget):
 
     def initUI(self):
         layout = QVBoxLayout()
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(20)
+        layout.setContentsMargins(15, 15, 15, 15)  # Reduced margins
+        layout.setSpacing(15)  # Reduced spacing
 
-        # Stats section
-        stats_layout = QHBoxLayout()
-        stats_layout.setSpacing(20)
+        # Top section - Stats
+        stats_frame = QFrame()
+        stats_frame.setStyleSheet('background-color: white; border-radius: 8px;')
+        stats_layout = QHBoxLayout(stats_frame)
+        stats_layout.setSpacing(15)
 
-        # Create stat widgets
-        self.emp_label = self.create_stat_widget('👥', 'Total Employees', '0')
-        self.att_label = self.create_stat_widget('📈', 'Attendance Rate', '0%')
-        self.gender_label = self.create_stat_widget('👫', 'Gender Distribution', '0%')
+        # Create stat widgets with reduced size
+        self.emp_label = self.create_stat_widget('Total Employees', '0')
+        self.att_label = self.create_stat_widget('Attendance Rate', '0%')
+        self.gender_label = self.create_stat_widget('Gender Distribution', '0%')
 
         stats_layout.addWidget(self.emp_label)
         stats_layout.addWidget(self.att_label)
         stats_layout.addWidget(self.gender_label)
-        layout.addLayout(stats_layout)
+        layout.addWidget(stats_frame)
 
-        # Chart section
+        # Middle section - Chart
         chart_frame = QFrame()
-        chart_frame.setStyleSheet('background-color: white; border-radius: 10px;')
+        chart_frame.setStyleSheet('background-color: white; border-radius: 8px;')
         chart_layout = QVBoxLayout(chart_frame)
+        chart_layout.setContentsMargins(10, 10, 10, 10)
 
-        # Chart title
-        chart_title = create_styled_label('Attendance Overview', font_size=16)
+        chart_title = create_styled_label('Attendance Overview', font_size=14)
         chart_title.setStyleSheet('font-weight: bold;')
         chart_layout.addWidget(chart_title)
 
-        self.figure = plt.figure(figsize=(10, 4))
+        self.figure = plt.figure(figsize=(8, 3))  # Reduced figure size
         self.canvas = FigureCanvas(self.figure)
         chart_layout.addWidget(self.canvas)
         layout.addWidget(chart_frame)
 
-        # Recent activities section
+        # Bottom section - Activities
         activities_frame = QFrame()
-        activities_frame.setStyleSheet('background-color: white; border-radius: 10px;')
+        activities_frame.setStyleSheet('background-color: white; border-radius: 8px;')
         activities_layout = QVBoxLayout(activities_frame)
+        activities_layout.setContentsMargins(10, 10, 10, 10)
 
-        activities_title = create_styled_label('Recent Activities', font_size=16)
+        activities_title = create_styled_label('Recent Activities', font_size=14)
         activities_title.setStyleSheet('font-weight: bold;')
         activities_layout.addWidget(activities_title)
 
@@ -67,33 +70,33 @@ class DashboardTab(QWidget):
         activities_layout.addWidget(self.activities_table)
         layout.addWidget(activities_frame)
 
+        # Set equal stretch for all sections
+        layout.setStretch(0, 1)  # Stats section
+        layout.setStretch(1, 1)  # Chart section
+        layout.setStretch(2, 1)  # Activities section
+
         self.setLayout(layout)
         self.refresh_data()
 
-    def create_stat_widget(self, icon: str, title: str, value: str) -> QFrame:
+    def create_stat_widget(self, title: str, value: str) -> QFrame:
         widget = QFrame()
         widget.setStyleSheet("""
             QFrame {
                 background-color: white;
-                border-radius: 10px;
-                padding: 20px;
+                border-radius: 8px;
+                padding: 15px;
             }
         """)
         layout = QVBoxLayout(widget)
+        layout.setSpacing(5)
         
-        # Icon and title
-        header = QHBoxLayout()
-        icon_label = QLabel(icon)
-        icon_label.setStyleSheet('font-size: 24px;')
-        title_label = create_styled_label(title)
+        # Title
+        title_label = create_styled_label(title, font_size=12)
         title_label.setStyleSheet('color: #7f8c8d;')
-        header.addWidget(icon_label)
-        header.addWidget(title_label)
-        header.addStretch()
-        layout.addLayout(header)
+        layout.addWidget(title_label)
         
         # Value
-        value_label = create_styled_label(value, font_size=24)
+        value_label = create_styled_label(value, font_size=18)  # Reduced font size
         value_label.setStyleSheet('font-weight: bold; color: #2c3e50;')
         value_label.setObjectName('value_label')
         layout.addWidget(value_label)
@@ -130,19 +133,54 @@ class DashboardTab(QWidget):
 
         # Get attendance data
         stats = self.db.get_attendance_stats()
-        dates = [stat[0] for stat in stats]
-        rates = [stat[2]/stat[1]*100 if stat[1] > 0 else 0 for stat in stats]
+        
+        if not stats:
+            # If no data, show empty chart
+            ax.text(0.5, 0.5, 'No attendance data available', 
+                   horizontalalignment='center', verticalalignment='center')
+            plt.tight_layout()
+            self.canvas.draw()
+            return
+
+        # Convert dates to datetime objects and rates to float
+        dates = []
+        rates = []
+        for stat in stats:
+            try:
+                date_str = stat[0]
+                if date_str:  # Only process if date is not None
+                    date = datetime.strptime(date_str, '%Y-%m-%d')
+                    total = float(stat[1])
+                    present = float(stat[2])
+                    rate = (present / total * 100) if total > 0 else 0
+                    dates.append(date)
+                    rates.append(rate)
+            except (ValueError, TypeError) as e:
+                print(f"Error processing date {date_str}: {e}")
+                continue
+
+        if not dates:  # If no valid dates after processing
+            ax.text(0.5, 0.5, 'No valid attendance data available', 
+                   horizontalalignment='center', verticalalignment='center')
+            plt.tight_layout()
+            self.canvas.draw()
+            return
 
         # Create gradient bars
         bars = ax.bar(dates, rates)
         for bar in bars:
             bar.set_color('#3498db')
 
+        # Format x-axis dates
         ax.set_ylabel('Attendance Rate (%)')
         ax.set_xlabel('Date')
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
-        plt.xticks(rotation=45)
+        
+        # Format date labels
+        plt.gcf().autofmt_xdate()  # Rotate and align the tick labels
+        ax.xaxis.set_major_formatter(plt.matplotlib.dates.DateFormatter('%Y-%m-%d'))
+        
         plt.tight_layout()
         self.canvas.draw()
 

@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                            QRadioButton, QButtonGroup, QMessageBox, QTableWidgetItem)
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, QRegExp
+from PyQt5.QtGui import QRegExpValidator
 from src.utils.ui_utils import (create_styled_button, create_styled_input, 
                             create_styled_combo, create_styled_table, 
                             create_styled_label, setup_table_headers)
@@ -16,16 +17,16 @@ class EmployeeTab(QWidget):
 
     def initUI(self):
         layout = QVBoxLayout()
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(20)
+        layout.setContentsMargins(15, 15, 15, 15)  # Reduced margins
+        layout.setSpacing(15)  # Reduced spacing
 
         # Form Layout
         form_layout = QVBoxLayout()
-        form_layout.setSpacing(15)
+        form_layout.setSpacing(10)  # Reduced spacing
 
         # Employee ID (read-only)
         id_layout = QHBoxLayout()
-        id_layout.addWidget(create_styled_label('ID:'))
+        id_layout.addWidget(create_styled_label('ID:', font_size=12))
         self.id_input = create_styled_input()
         self.id_input.setReadOnly(True)
         self.id_input.setPlaceholderText('Auto-generated')
@@ -34,14 +35,22 @@ class EmployeeTab(QWidget):
 
         # Name
         name_layout = QHBoxLayout()
-        name_layout.addWidget(create_styled_label('Name:'))
+        name_layout.addWidget(create_styled_label('Name:', font_size=12))
         self.name_input = create_styled_input()
+        self.name_input.setMaxLength(50)
+        
+        # Set up name validation using QRegExp
+        name_regex = QRegExp(r'^[A-Za-z\s]*$')
+        name_validator = QRegExpValidator(name_regex)
+        self.name_input.setValidator(name_validator)
+        self.name_input.setPlaceholderText('Enter name (letters only)')
+        
         name_layout.addWidget(self.name_input)
         form_layout.addLayout(name_layout)
 
         # Gender
         gender_layout = QHBoxLayout()
-        gender_layout.addWidget(create_styled_label('Gender:'))
+        gender_layout.addWidget(create_styled_label('Gender:', font_size=12))
         self.gender_group = QButtonGroup()
         
         male_radio = QRadioButton('Male')
@@ -51,12 +60,12 @@ class EmployeeTab(QWidget):
         for radio in [male_radio, female_radio]:
             radio.setStyleSheet("""
                 QRadioButton {
-                    font-size: 14px;
-                    padding: 5px;
+                    font-size: 12px;
+                    padding: 3px;
                 }
                 QRadioButton::indicator {
-                    width: 20px;
-                    height: 20px;
+                    width: 16px;
+                    height: 16px;
                 }
             """)
         
@@ -69,14 +78,14 @@ class EmployeeTab(QWidget):
 
         # Email
         email_layout = QHBoxLayout()
-        email_layout.addWidget(create_styled_label('Email:'))
+        email_layout.addWidget(create_styled_label('Email:', font_size=12))
         self.email_input = create_styled_input()
         email_layout.addWidget(self.email_input)
         form_layout.addLayout(email_layout)
 
         # Department
         dept_layout = QHBoxLayout()
-        dept_layout.addWidget(create_styled_label('Department:'))
+        dept_layout.addWidget(create_styled_label('Department:', font_size=12))
         self.dept_input = create_styled_combo()
         self.dept_input.addItems(['HR', 'Finance', 'IT', 'Marketing', 'Operations'])
         dept_layout.addWidget(self.dept_input)
@@ -84,9 +93,9 @@ class EmployeeTab(QWidget):
 
         # Buttons
         button_layout = QHBoxLayout()
-        save_btn = create_styled_button('💾 Save')
+        save_btn = create_styled_button('Save')
         save_btn.clicked.connect(self.save_employee)
-        clear_btn = create_styled_button('🧹 Clear Form')
+        clear_btn = create_styled_button('Clear Form')
         clear_btn.clicked.connect(self.clear_form)
         button_layout.addWidget(save_btn)
         button_layout.addWidget(clear_btn)
@@ -95,7 +104,7 @@ class EmployeeTab(QWidget):
         layout.addLayout(form_layout)
 
         # Employee List
-        list_label = create_styled_label('📋 Employee List', font_size=16)
+        list_label = create_styled_label('Employee List', font_size=14)
         list_label.setStyleSheet('font-weight: bold;')
         layout.addWidget(list_label)
 
@@ -105,11 +114,11 @@ class EmployeeTab(QWidget):
 
         # Action Buttons
         action_layout = QHBoxLayout()
-        edit_btn = create_styled_button('✏️ Edit Selected')
+        edit_btn = create_styled_button('Edit Selected')
         edit_btn.clicked.connect(self.edit_selected)
-        delete_btn = create_styled_button('❌ Delete Selected')
+        delete_btn = create_styled_button('Delete Selected')
         delete_btn.clicked.connect(self.delete_selected)
-        refresh_btn = create_styled_button('🔄 Refresh List')
+        refresh_btn = create_styled_button('Refresh List')
         refresh_btn.clicked.connect(self.refresh_table)
         
         action_layout.addWidget(edit_btn)
@@ -120,8 +129,18 @@ class EmployeeTab(QWidget):
         self.setLayout(layout)
         self.refresh_table()
 
+    def validate_name(self, text):
+        """Validate that name contains only letters and spaces"""
+        # Remove any non-letter characters (except spaces)
+        cleaned_text = re.sub(r'[^a-zA-Z\s]', '', text)
+        if cleaned_text != text:
+            # If text was modified, update the input
+            self.name_input.setText(cleaned_text)
+            # Move cursor to end
+            self.name_input.setCursorPosition(len(cleaned_text))
+
     def save_employee(self):
-        name = self.name_input.text()
+        name = self.name_input.text().strip()  # Remove leading/trailing spaces
         email = self.email_input.text()
         department = self.dept_input.currentText()
         
@@ -130,6 +149,12 @@ class EmployeeTab(QWidget):
 
         if not all([name, email, department, gender]):
             QMessageBox.warning(self, 'Error', 'All fields are required!')
+            return
+
+        # Additional name validation using QRegExp
+        name_regex = QRegExp(r'^[A-Za-z\s]+$')
+        if not name_regex.exactMatch(name):
+            QMessageBox.warning(self, 'Error', 'Name can only contain letters and spaces!')
             return
 
         if self.id_input.text():  # Update existing employee

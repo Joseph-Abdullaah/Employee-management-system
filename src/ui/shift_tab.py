@@ -13,35 +13,35 @@ class ShiftTab(QWidget):
 
     def initUI(self):
         layout = QVBoxLayout()
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(20)
+        layout.setContentsMargins(15, 15, 15, 15)  # Reduced margins
+        layout.setSpacing(15)  # Reduced spacing
 
         # Form Layout
         form_layout = QHBoxLayout()
-        form_layout.setSpacing(15)
+        form_layout.setSpacing(10)  # Reduced spacing
 
         # Employee Selection
-        employee_label = create_styled_label('Employee:')
+        employee_label = create_styled_label('Employee:', font_size=12)
         self.employee_combo = create_styled_combo()
         form_layout.addWidget(employee_label)
         form_layout.addWidget(self.employee_combo)
 
         # Shift Type Selection
-        shift_label = create_styled_label('Shift Type:')
+        shift_label = create_styled_label('Shift Type:', font_size=12)
         self.shift_combo = create_styled_combo()
         self.shift_combo.addItems(['Morning', 'Evening', 'Night'])
         form_layout.addWidget(shift_label)
         form_layout.addWidget(self.shift_combo)
 
         # Assign Button
-        assign_btn = create_styled_button('📌 Assign Shift')
+        assign_btn = create_styled_button('Assign Shift')
         assign_btn.clicked.connect(self.assign_shift)
         form_layout.addWidget(assign_btn)
 
         layout.addLayout(form_layout)
 
         # Shift List
-        list_label = create_styled_label('📋 Assigned Shifts', font_size=16)
+        list_label = create_styled_label('Assigned Shifts', font_size=14)
         list_label.setStyleSheet('font-weight: bold;')
         layout.addWidget(list_label)
 

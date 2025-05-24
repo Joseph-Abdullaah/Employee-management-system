@@ -103,6 +103,9 @@ class Database:
     def delete_employee(self, id: int):
         employee = self.get_employee_by_id(id)
         if employee:
+            # First delete related records to maintain referential integrity
+            self.cursor.execute('DELETE FROM attendance WHERE employee_id=?', (id,))
+            self.cursor.execute('DELETE FROM shifts WHERE employee_id=?', (id,))
             self.cursor.execute('DELETE FROM employees WHERE id=?', (id,))
             self.conn.commit()
             self.log_activity('employee_deleted', f'Employee deleted: {employee[1]}')
@@ -163,14 +166,24 @@ class Database:
         return self.cursor.fetchall()
 
     def get_attendance_stats(self) -> List[tuple]:
+        """Get attendance statistics with proper employee count"""
         self.cursor.execute('''
-            SELECT date, 
-                   COUNT(*) as total,
-                   SUM(CASE WHEN present THEN 1 ELSE 0 END) as present_count
-            FROM attendance
-            GROUP BY date
-            ORDER BY date DESC
-            LIMIT 30
+            WITH RECURSIVE dates(date) AS (
+                SELECT date('now', '-29 days')
+                UNION ALL
+                SELECT date(date, '+1 day')
+                FROM dates
+                WHERE date < date('now')
+            )
+            SELECT 
+                dates.date,
+                COUNT(DISTINCT e.id) as total_employees,
+                COUNT(DISTINCT CASE WHEN a.present THEN a.employee_id END) as present_count
+            FROM dates
+            CROSS JOIN employees e
+            LEFT JOIN attendance a ON a.employee_id = e.id AND a.date = dates.date
+            GROUP BY dates.date
+            ORDER BY dates.date DESC
         ''')
         return self.cursor.fetchall()
 
@@ -179,13 +192,14 @@ class Database:
         self.cursor.execute('SELECT COUNT(*) FROM employees')
         total_employees = self.cursor.fetchone()[0]
 
-        # Get attendance rate for today
+        # Get attendance rate for today with proper employee count
         today = datetime.now().date()
         self.cursor.execute('''
-            SELECT COUNT(*) as total,
-                   SUM(CASE WHEN present THEN 1 ELSE 0 END) as present_count
-            FROM attendance
-            WHERE date=?
+            SELECT 
+                COUNT(DISTINCT e.id) as total_employees,
+                COUNT(DISTINCT CASE WHEN a.present THEN a.employee_id END) as present_count
+            FROM employees e
+            LEFT JOIN attendance a ON a.employee_id = e.id AND a.date = ?
         ''', (today,))
         attendance_data = self.cursor.fetchone()
         attendance_rate = 0
