@@ -189,7 +189,16 @@ class DashboardTab(QWidget):
         self.activities_table.setRowCount(len(activities))
         
         for i, (_, description, timestamp) in enumerate(activities):
-            time_str = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S').strftime('%H:%M')
+            # Convert timestamp to datetime and format it
+            activity_time = datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+            now = datetime.now()
+            
+            # If activity is from today, show only time
+            if activity_time.date() == now.date():
+                time_str = activity_time.strftime('%I:%M %p')  # 12-hour format with AM/PM
+            else:
+                # If activity is from a different day, show date and time
+                time_str = activity_time.strftime('%Y-%m-%d %I:%M %p')
             
             time_item = QTableWidgetItem(time_str)
             activity_item = QTableWidgetItem(description)

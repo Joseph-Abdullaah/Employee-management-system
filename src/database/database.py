@@ -49,7 +49,7 @@ class Database:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 action_type TEXT NOT NULL,
                 description TEXT NOT NULL,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                timestamp TIMESTAMP NOT NULL
             )
         ''')
 
@@ -60,10 +60,11 @@ class Database:
 
     def log_activity(self, action_type: str, description: str):
         """Log an activity for real-time updates"""
+        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         self.cursor.execute('''
-            INSERT INTO activity_log (action_type, description)
-            VALUES (?, ?)
-        ''', (action_type, description))
+            INSERT INTO activity_log (action_type, description, timestamp)
+            VALUES (?, ?, ?)
+        ''', (action_type, description, current_time))
         self.conn.commit()
 
     # Employee Management Methods
